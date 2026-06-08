@@ -22,8 +22,11 @@ YochirenSSE-Extractor/
 │   └── icon.svg            # README用アイコン
 ├── downloads/              # PDF置き場
 ├── data/session/           # 解析結果の保存先
+├── data/sse_catalog.csv    # session CSVを結合した一覧
 ├── notebooks/
-│   └── Yochiren_downloader.ipynb
+│   └── Yochiren_downloader.ipynb  # PDFダウンロード用
+├── scripts/
+│   └── build_sse_catalog.py       # sse_catalog.csv生成
 ├── .env.example            # APIキー設定の見本
 └── pyproject.toml          # 依存ライブラリ設定
 ```
@@ -84,6 +87,20 @@ uv run python app.py
 
 保存ファイル名はPDF名を基準に作るため、PCごとの絶対パスが変わっても前回データを見つけやすくしています。切り出し画像も `data/session/crops/` から自動的に探します。
 
+## SSEカタログを作る
+
+`data/session/_*.csv` を結合して、時系列順の `data/sse_catalog.csv` を作るには次を実行します。
+
+```bash
+uv run python scripts/build_sse_catalog.py
+```
+
+このスクリプトは `timestamp` の `午前` / `午後` を `AM` / `PM` に正規化し、ファイル名から年を補完して並べ替えます。入力や出力を変えたい場合は、次のように指定できます。
+
+```bash
+uv run python scripts/build_sse_catalog.py --session-dir data/session --output data/sse_catalog.csv
+```
+
 ## APIキーを守るために
 
 - APIキーは `.env` にだけ書く
@@ -93,4 +110,4 @@ uv run python app.py
 
 ## メモ
 
-ダウンロード用ノートブックは `notebooks/Yochiren_downloader.ipynb` に置いています。PDFを増やしたいときだけ使えば大丈夫です。
+ダウンロード用ノートブックは `notebooks/Yochiren_downloader.ipynb` に置いています。PDFを増やしたいときだけ使えば大丈夫です。`sse_catalog.csv` の生成は `scripts/build_sse_catalog.py` に分けています。
