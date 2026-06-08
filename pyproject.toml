@@ -1,5 +1,5 @@
 [project]
-name = "yochiren"
+name = "YochirenSSE-Extractor"
 version = "0.1.0"
 description = "PDF figures cropper and extractor for Yochiren slow-slip event reports"
 readme = "README.md"

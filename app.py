@@ -22,7 +22,7 @@ STORE_LOCK = threading.RLock()
 # =========================
 # Config / Constants
 # =========================
-APP_TITLE = "Yochiren PDF Figure Cropper"
+APP_TITLE = "YochirenSSE-Extractor"
 APP_DIR = Path(__file__).resolve().parent
 DEFAULT_DPI = 350
 RESULT_DIR = APP_DIR / "data" / "session"
@@ -31,6 +31,18 @@ DOWNLOAD_DIR = APP_DIR / "downloads"
 MAX_DISPLAY_WIDTH = 1500
 MAX_DISPLAY_HEIGHT = 1080
 MODEL_DEFAULT = "gpt-5.4-mini"
+COLOR_BG = "#edf2f1"
+COLOR_PANEL = "#f8fbfa"
+COLOR_SURFACE = "#ffffff"
+COLOR_INK = "#1d2b34"
+COLOR_MUTED = "#647780"
+COLOR_BORDER = "#d7e1de"
+COLOR_ACCENT = "#128c7e"
+COLOR_ACCENT_DARK = "#0f6f65"
+COLOR_ACCENT_SOFT = "#e4f3f0"
+COLOR_WARN = "#b7791f"
+COLOR_DANGER = "#b94a48"
+COLOR_CANVAS = "#172026"
 
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 CROP_DIR.mkdir(parents=True, exist_ok=True)
@@ -363,6 +375,8 @@ class App(tk.Tk):
         super().__init__()
         self.title(APP_TITLE)
         self.geometry(f"{MAX_DISPLAY_WIDTH}x{MAX_DISPLAY_HEIGHT}")
+        self.minsize(1120, 760)
+        self.configure(bg=COLOR_BG)
 
         # PDF
         self.pdf_path: str | None = None
@@ -393,10 +407,113 @@ class App(tk.Tk):
         self.pending_jobs: set[str] = set()  # uid集合
         self.help_window: tk.Toplevel | None = None
 
+        self._configure_style()
         self._build_ui()
         self._bind_keys()
 
     # ---------- UI ----------
+    def _configure_style(self):
+        self.style = ttk.Style(self)
+        try:
+            self.style.theme_use("clam")
+        except tk.TclError:
+            pass
+
+        self.option_add("*Font", ("TkDefaultFont", 10))
+        self.option_add("*Menu.background", COLOR_SURFACE)
+        self.option_add("*Menu.foreground", COLOR_INK)
+        self.option_add("*Menu.activeBackground", "#dcecea")
+        self.option_add("*Menu.activeForeground", COLOR_INK)
+
+        self.style.configure(".", font=("TkDefaultFont", 10))
+        self.style.configure("App.TFrame", background=COLOR_BG)
+        self.style.configure("Toolbar.TFrame", background=COLOR_SURFACE)
+        self.style.configure("Panel.TFrame", background=COLOR_PANEL)
+        self.style.configure("Card.TFrame", background=COLOR_SURFACE)
+        self.style.configure("TLabel", background=COLOR_SURFACE, foreground=COLOR_INK)
+        self.style.configure(
+            "Title.TLabel",
+            background=COLOR_SURFACE,
+            foreground=COLOR_INK,
+            font=("TkDefaultFont", 15, "bold"),
+        )
+        self.style.configure(
+            "Muted.TLabel", background=COLOR_SURFACE, foreground=COLOR_MUTED
+        )
+        self.style.configure(
+            "PanelTitle.TLabel",
+            background=COLOR_PANEL,
+            foreground=COLOR_INK,
+            font=("TkDefaultFont", 12, "bold"),
+            padding=(0, 0, 0, 8),
+        )
+        self.style.configure(
+            "Field.TLabel", background=COLOR_SURFACE, foreground=COLOR_MUTED
+        )
+        self.style.configure(
+            "Page.TLabel",
+            background=COLOR_SURFACE,
+            foreground=COLOR_ACCENT_DARK,
+            font=("TkDefaultFont", 10, "bold"),
+        )
+        self.style.configure(
+            "Status.TLabel",
+            background="#21323b",
+            foreground="#e8f3f1",
+            padding=(12, 6),
+            relief="flat",
+        )
+        self.style.configure("TEntry", padding=(8, 5), fieldbackground="#ffffff")
+        self.style.configure("TSpinbox", padding=(7, 4), fieldbackground="#ffffff")
+        self.style.configure(
+            "TButton",
+            padding=(10, 6),
+            background="#ffffff",
+            foreground=COLOR_INK,
+            bordercolor=COLOR_BORDER,
+            focusthickness=0,
+        )
+        self.style.map("TButton", background=[("active", "#eef6f4")])
+        self.style.configure(
+            "Accent.TButton",
+            background=COLOR_ACCENT,
+            foreground="#ffffff",
+            bordercolor=COLOR_ACCENT,
+            focusthickness=0,
+        )
+        self.style.map(
+            "Accent.TButton",
+            background=[("active", COLOR_ACCENT_DARK), ("disabled", "#9cb8b4")],
+            foreground=[("disabled", "#eef4f3")],
+        )
+        self.style.configure(
+            "Danger.TButton",
+            background="#fff4f2",
+            foreground=COLOR_DANGER,
+            bordercolor="#e8b9b5",
+        )
+        self.style.map("Danger.TButton", background=[("active", "#ffe7e3")])
+        self.style.configure(
+            "Crop.TLabelframe",
+            background=COLOR_SURFACE,
+            bordercolor=COLOR_BORDER,
+            relief="solid",
+            padding=(12, 10),
+        )
+        self.style.configure(
+            "Crop.TLabelframe.Label",
+            background=COLOR_SURFACE,
+            foreground=COLOR_ACCENT_DARK,
+            font=("TkDefaultFont", 10, "bold"),
+        )
+        self.style.configure(
+            "Thumb.TLabel",
+            background="#f1f6f5",
+            bordercolor=COLOR_BORDER,
+            relief="solid",
+            padding=6,
+        )
+
     def _build_ui(self):
         menubar = tk.Menu(self)
         filemenu = tk.Menu(menubar, tearoff=0)
@@ -407,58 +524,89 @@ class App(tk.Tk):
         menubar.add_cascade(label="File", menu=filemenu)
         self.config(menu=menubar)
 
-        toolbar = ttk.Frame(self)
+        toolbar = ttk.Frame(self, style="Toolbar.TFrame", padding=(14, 10))
         toolbar.pack(side=tk.TOP, fill=tk.X)
 
-        ttk.Label(toolbar, text="DPI:").pack(side=tk.LEFT)
+        title_area = ttk.Frame(toolbar, style="Toolbar.TFrame")
+        title_area.pack(side=tk.LEFT)
+        ttk.Label(
+            title_area,
+            text="YochirenSSE-Extractor",
+            style="Title.TLabel",
+        ).pack(anchor="w")
+        ttk.Label(
+            title_area,
+            text="PDF figures to structured SSE records",
+            style="Muted.TLabel",
+        ).pack(anchor="w")
+
+        controls = ttk.Frame(toolbar, style="Toolbar.TFrame")
+        controls.pack(side=tk.RIGHT)
+
+        ttk.Label(controls, text="DPI:", style="Muted.TLabel").pack(side=tk.LEFT)
         self.dpi_var = tk.IntVar(value=self.dpi)
         dpi_entry = ttk.Spinbox(
-            toolbar, from_=120, to=600, increment=10, textvariable=self.dpi_var, width=6
+            controls,
+            from_=120,
+            to=600,
+            increment=10,
+            textvariable=self.dpi_var,
+            width=6,
         )
-        dpi_entry.pack(side=tk.LEFT, padx=4)
+        dpi_entry.pack(side=tk.LEFT, padx=(5, 12))
 
-        ttk.Label(toolbar, text="Model:").pack(side=tk.LEFT)
+        ttk.Label(controls, text="Model:", style="Muted.TLabel").pack(side=tk.LEFT)
         self.model_var = tk.StringVar(value=self.model_name)
-        ttk.Entry(toolbar, textvariable=self.model_var, width=20).pack(
-            side=tk.LEFT, padx=4
+        ttk.Entry(controls, textvariable=self.model_var, width=20).pack(
+            side=tk.LEFT, padx=(5, 12)
         )
 
-        ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=6)
-
-        ttk.Button(toolbar, text="Prev (<)", command=self.prev_page).pack(
-            side=tk.LEFT, padx=4
+        ttk.Separator(controls, orient=tk.VERTICAL).pack(
+            side=tk.LEFT, fill=tk.Y, padx=(0, 12)
         )
-        self.page_label = ttk.Label(toolbar, text="Page -/-")
+
+        ttk.Button(controls, text="Prev", command=self.prev_page).pack(
+            side=tk.LEFT, padx=(0, 4)
+        )
+        self.page_label = ttk.Label(controls, text="Page -/-", style="Page.TLabel")
         self.page_label.pack(side=tk.LEFT, padx=8)
-        ttk.Button(toolbar, text="Next (>)", command=self.next_page).pack(
-            side=tk.LEFT, padx=4
+        ttk.Button(controls, text="Next", command=self.next_page).pack(
+            side=tk.LEFT, padx=(4, 12)
         )
 
-        ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=6)
+        ttk.Separator(controls, orient=tk.VERTICAL).pack(
+            side=tk.LEFT, fill=tk.Y, padx=(0, 12)
+        )
 
         # Zoom controls
         ttk.Button(
-            toolbar, text="-", width=3, command=lambda: self._zoom_step(0.9)
+            controls, text="-", width=3, command=lambda: self._zoom_step(0.9)
         ).pack(side=tk.LEFT)
-        ttk.Button(toolbar, text="100%", command=self._zoom_reset).pack(
+        ttk.Button(controls, text="100%", command=self._zoom_reset).pack(
             side=tk.LEFT, padx=2
         )
-        ttk.Button(toolbar, text="Fit Width", command=self._zoom_fit_width).pack(
+        ttk.Button(controls, text="Fit Width", command=self._zoom_fit_width).pack(
             side=tk.LEFT, padx=2
         )
         ttk.Button(
-            toolbar, text="+", width=3, command=lambda: self._zoom_step(1.1)
-        ).pack(side=tk.LEFT)
+            controls, text="+", width=3, command=lambda: self._zoom_step(1.1)
+        ).pack(side=tk.LEFT, padx=(0, 12))
 
         ttk.Button(
-            toolbar, text="Save All on Page", command=self.save_all_on_page
-        ).pack(side=tk.RIGHT, padx=4)
+            controls,
+            text="Save Page",
+            command=self.save_all_on_page,
+            style="Accent.TButton",
+        ).pack(side=tk.LEFT)
 
-        self.main = ttk.Panedwindow(self, orient=tk.HORIZONTAL)
+        body = ttk.Frame(self, style="App.TFrame", padding=(12, 0, 12, 12))
+        body.pack(fill=tk.BOTH, expand=True)
+
+        self.main = ttk.Panedwindow(body, orient=tk.HORIZONTAL)
         self.main.pack(fill=tk.BOTH, expand=True)
 
         # 左：PDFキャンバス
-        left = ttk.Frame(self.main)
+        left = ttk.Frame(self.main, style="Panel.TFrame")
         self.main.add(left, weight=3)
 
         vsb_left = ttk.Scrollbar(left, orient=tk.VERTICAL)
@@ -469,7 +617,7 @@ class App(tk.Tk):
 
         self.canvas = tk.Canvas(
             left,
-            bg="#1b1b1b",
+            bg=COLOR_CANVAS,
             highlightthickness=0,
             yscrollcommand=vsb_left.set,
             xscrollcommand=hsb_left.set,
@@ -494,10 +642,13 @@ class App(tk.Tk):
         self.canvas.bind("<Control-Button-5>", self._on_ctrl_wheel_linux)
 
         # 右：フォーム
-        right = ttk.Frame(self.main)
+        right = ttk.Frame(self.main, style="Panel.TFrame", padding=(10, 10, 0, 0))
         self.main.add(right, weight=2)
 
-        self.scroll_canvas = tk.Canvas(right, bg="#f9f9fb")
+        ttk.Label(right, text="Extracted Figures", style="PanelTitle.TLabel").pack(
+            side=tk.TOP, anchor="w"
+        )
+        self.scroll_canvas = tk.Canvas(right, bg=COLOR_PANEL, highlightthickness=0)
         self.scroll_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         vsb_right = ttk.Scrollbar(
             right, orient=tk.VERTICAL, command=self.scroll_canvas.yview
@@ -511,7 +662,7 @@ class App(tk.Tk):
         self.scroll_canvas.bind(
             "<Button-5>", self._on_mousewheel_linux_right
         )  # Linux down
-        self.form_frame = ttk.Frame(self.scroll_canvas)
+        self.form_frame = ttk.Frame(self.scroll_canvas, style="Panel.TFrame")
         self.window_id = self.scroll_canvas.create_window(
             (0, 0), window=self.form_frame, anchor="nw"
         )
@@ -528,7 +679,7 @@ class App(tk.Tk):
 
         self.status = tk.StringVar(value="Ready")
         self.statusbar = ttk.Label(
-            self, textvariable=self.status, anchor="w", relief="sunken"
+            self, textvariable=self.status, anchor="w", style="Status.TLabel"
         )
         self.statusbar.pack(side=tk.BOTTOM, fill=tk.X)
 
@@ -612,10 +763,21 @@ class App(tk.Tk):
         win.transient(self)
         self.help_window = win
 
-        container = ttk.Frame(win, padding=12)
+        win.configure(bg=COLOR_BG)
+        container = ttk.Frame(win, padding=12, style="App.TFrame")
         container.pack(fill=tk.BOTH, expand=True)
 
-        text = tk.Text(container, wrap="word", height=20)
+        text = tk.Text(
+            container,
+            wrap="word",
+            height=20,
+            bg=COLOR_SURFACE,
+            fg=COLOR_INK,
+            insertbackground=COLOR_ACCENT,
+            relief="flat",
+            padx=12,
+            pady=12,
+        )
         text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=text.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -950,31 +1112,36 @@ class App(tk.Tk):
             self._append_form_for_record(rec, pending=(rec.uid in self.pending_jobs))
 
     def _append_form_for_record(self, rec: CropRecord, pending: bool = False):
-        frame = ttk.LabelFrame(self.form_frame, text=Path(rec.img_path).name)
-        frame.pack(fill=tk.X, padx=6, pady=6)
+        frame = ttk.LabelFrame(
+            self.form_frame, text=Path(rec.img_path).name, style="Crop.TLabelframe"
+        )
+        frame.pack(fill=tk.X, padx=(0, 10), pady=(0, 10))
+        frame.columnconfigure(2, weight=1)
 
         try:
             im = Image.open(path_for_display(rec.img_path))
-            im.thumbnail((300, 300))
+            im.thumbnail((260, 260))
             ph = ImageTk.PhotoImage(im)
         except Exception:
             ph = None
 
-        thumb = ttk.Label(frame)
+        thumb = ttk.Label(frame, style="Thumb.TLabel")
         if ph:
             thumb.configure(image=ph)
             thumb.image = ph
-        thumb.grid(row=0, column=0, rowspan=12, padx=6, pady=6)
+        thumb.grid(row=0, column=0, rowspan=13, padx=(0, 14), pady=(2, 8))
 
         vars_map: dict[str, tk.Variable] = {}
 
         def add_field(row: int, key: str, label: str):
-            ttk.Label(frame, text=label).grid(row=row, column=1, sticky="e")
+            ttk.Label(frame, text=label, style="Field.TLabel").grid(
+                row=row, column=1, sticky="e", padx=(0, 8), pady=3
+            )
             v = tk.StringVar(
                 value="" if rec.fields.get(key) is None else str(rec.fields.get(key))
             )
             e = ttk.Entry(frame, textvariable=v, width=18)
-            e.grid(row=row, column=2, sticky="w", padx=4, pady=2)
+            e.grid(row=row, column=2, sticky="ew", padx=(0, 4), pady=3)
             if pending:
                 e.configure(state="disabled")
             vars_map[key] = v
@@ -994,8 +1161,12 @@ class App(tk.Tk):
         add_field(9, "slip", "Slip")
         add_field(10, "mw", "Mw")
 
-        status_lbl = ttk.Label(frame, text=("analysing..." if pending else "Ready"))
-        status_lbl.grid(row=11, column=1, sticky="w", padx=4)
+        status_lbl = ttk.Label(
+            frame,
+            text=("Analysing..." if pending else "Ready"),
+            foreground=(COLOR_WARN if pending else COLOR_ACCENT_DARK),
+        )
+        status_lbl.grid(row=11, column=1, sticky="w", padx=(0, 8), pady=(8, 0))
 
         def do_save():
             for k, v in vars_map.items():
@@ -1012,14 +1183,17 @@ class App(tk.Tk):
             persist_all(self.records, self.pdf_path)
             self.status.set(f"Saved {Path(rec.img_path).name}")
 
-        btns = ttk.Frame(frame)
-        btns.grid(row=11, column=2, sticky="w", pady=4)
-        save_btn = ttk.Button(btns, text="Save", command=do_save)
+        btns = ttk.Frame(frame, style="Card.TFrame")
+        btns.grid(row=11, column=2, sticky="e", pady=(8, 0))
+        save_btn = ttk.Button(btns, text="Save", command=do_save, style="Accent.TButton")
         save_btn.pack(side=tk.LEFT)
         delete_btn = ttk.Button(
-            btns, text="Delete", command=lambda: self._delete_record(rec)
+            btns,
+            text="Delete",
+            command=lambda: self._delete_record(rec),
+            style="Danger.TButton",
         )
-        delete_btn.pack(side=tk.LEFT, padx=4)
+        delete_btn.pack(side=tk.LEFT, padx=(6, 0))
 
         frame.save_btn = save_btn
         frame.status_lbl = status_lbl
@@ -1028,7 +1202,7 @@ class App(tk.Tk):
         if pending:
             delete_btn.configure(state="disabled")
             save_btn.configure(state="disabled")
-            status_lbl.configure(foreground="#b36b00")
+            status_lbl.configure(foreground=COLOR_WARN)
 
         self.form_by_uid[rec.uid] = frame
 
@@ -1055,7 +1229,7 @@ class App(tk.Tk):
             frame.delete_btn.configure(state="normal")
 
         if hasattr(frame, "status_lbl"):
-            frame.status_lbl.configure(text="Ready", foreground="black")
+            frame.status_lbl.configure(text="Ready", foreground=COLOR_ACCENT_DARK)
         self.update_idletasks()
 
     def _delete_record(self, rec: CropRecord):
